@@ -5,8 +5,8 @@
  */
 
 import { assignCrew, dockBays, forkliftPose, type DockBay } from "./crew";
-import { dockById } from "./layout";
-import { planMotion, motionEndsAt, sampleMotion, stationaryMotion, timeCrossingZ, type Motion } from "./motion";
+import { OVERFLOW_LOT, dockById, inOverflowLot } from "./layout";
+import { planMotion, motionEndsAt, sampleMotion, stationaryMotion, timeCrossingZ, yawToward, type Motion } from "./motion";
 import { GRADUATION_ARCH_Z, SPAWN_POINT, routeBetween } from "./roads";
 import { advanceTrucks } from "./rules";
 import type { ActivityEvent, Coin, DockId, Forklift, ForkliftId, Truck, TruckId, TruckState } from "./types";
@@ -70,8 +70,11 @@ function forkliftKey(f: Forklift): string {
   return `${f.position.x},${f.position.z}`;
 }
 
+/** Heading of a truck placed directly in its spot (on first load): docked, lot bays face the aisle, otherwise south. */
 function restingYaw(t: Truck): number {
-  return t.dockId ? (dockById(t.dockId)?.heading ?? PARKED_YAW) : PARKED_YAW;
+  if (t.dockId) return dockById(t.dockId)?.heading ?? PARKED_YAW;
+  if (inOverflowLot(t.position)) return yawToward(t.position.x < OVERFLOW_LOT.aisleX ? -1 : 1, 0);
+  return PARKED_YAW;
 }
 
 export function stepWorld(world: World, coins: Readonly<Record<string, Coin>>, now: number): World {

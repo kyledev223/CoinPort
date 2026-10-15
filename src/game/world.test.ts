@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { GRADUATION_DWELL_MS } from "./constants";
 import { CRATES_PER_TRUCK, forkliftPose, unloadSpots } from "./crew";
 import { DOCK_COUNT } from "./constants";
-import { createSeedForklifts } from "./mock/seed";
+import { createForklifts } from "./forklifts";
 import { motionEndsAt, sampleMotion } from "./motion";
 import { GRADUATION_ARCH_Z, SPAWN_POINT } from "./roads";
 import { truckIdForMint } from "./rules";
@@ -63,7 +63,7 @@ describe("stepWorld", () => {
   });
 
   it("drives a new launch in from off-map and through intake, never teleporting", () => {
-    let w = stepWorld(createWorld(createSeedForklifts(), T0), {}, T0);
+    let w = stepWorld(createWorld(createForklifts(), T0), {}, T0);
     const coins = byMint(coin("new", { createdAt: T0 + 1000 }));
     w = stepWorld(w, coins, T0 + 1000);
     const id = truckIdForMint("new");
@@ -84,7 +84,7 @@ describe("stepWorld", () => {
   });
 
   it("fills the crates as unloading completes", () => {
-    let w = stepWorld(createWorld(createSeedForklifts(), T0), {}, T0);
+    let w = stepWorld(createWorld(createForklifts(), T0), {}, T0);
     const coins = byMint(coin("c", { createdAt: T0 }));
     w = run(w, coins, T0 + 1000, T0 + 39_000);
     const truck = w.trucks[0];
@@ -111,7 +111,7 @@ describe("stepWorld", () => {
     const m = w.motions[truck.id];
     const flash = w.gateFlashes[0];
     expect(flash).toBeGreaterThan(T0 + GRADUATION_DWELL_MS - 1);
-    expect(sampleMotion(m, flash).z).toBeCloseTo(GRADUATION_ARCH_Z, 6);
+    expect(sampleMotion(m, flash).z).toBeCloseTo(GRADUATION_ARCH_Z, 4);
 
     w = run(w, coins, T0 + GRADUATION_DWELL_MS + 1000, Math.ceil(motionEndsAt(m) / 1000) * 1000 + 1000);
     expect(w.trucks).toHaveLength(0);

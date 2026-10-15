@@ -96,8 +96,8 @@ export const STORAGE_ZONE_BY_TIER: Readonly<Record<StorageTier, StorageZoneId>> 
   3: "storage-c",
 };
 
-/** Off-map point departed trucks drive to. */
-export const EXIT_POSITION: Vec3 = { x: 85, y: 0, z: -50 };
+/** Where departed trucks leave the hub: out the east road onto the city ring road. */
+export const EXIT_POSITION: Vec3 = { x: 129, y: 0, z: -50 };
 
 /** Footprint of one parking slot (a truck plus clearance). */
 export const SLOT_SIZE = { width: 4, depth: 8 } as const;
@@ -135,8 +135,8 @@ export function dockById(id: DockId): Dock | undefined {
 // tier (zoneId); only their parking spot moves.
 
 export const OVERFLOW_LOT = {
-  minX: 44,
-  maxX: 88,
+  minX: 39,
+  maxX: 93,
   minZ: -11,
   maxZ: 66,
   /** Centre line of the north–south drive aisle down the middle. */
@@ -144,8 +144,11 @@ export const OVERFLOW_LOT = {
   aisleWidth: 6,
 } as const;
 
-/** Lot slots are packed tighter than hall slots. */
-export const LOT_SLOT = { width: 3, depth: 7.6 } as const;
+/**
+ * Lot bays face the aisle: trucks drive down the aisle, then turn east or west
+ * into a bay, so a bay is a truck's length along x and packed tight along z.
+ */
+export const LOT_SLOT = { width: 8, depth: 3.2 } as const;
 
 const LOT_COLS_PER_SIDE = Math.floor((OVERFLOW_LOT.aisleX - OVERFLOW_LOT.aisleWidth / 2 - OVERFLOW_LOT.minX) / LOT_SLOT.width);
 const LOT_COLS = LOT_COLS_PER_SIDE * 2;
@@ -156,7 +159,7 @@ export function lotSlotPosition(index: number): Vec3 {
   const col = index % LOT_COLS;
   const westOfAisle = col < LOT_COLS_PER_SIDE;
   const x = westOfAisle
-    ? OVERFLOW_LOT.aisleX - OVERFLOW_LOT.aisleWidth / 2 - (LOT_COLS_PER_SIDE - col - 0.5) * LOT_SLOT.width
+    ? OVERFLOW_LOT.aisleX - OVERFLOW_LOT.aisleWidth / 2 - (col + 0.5) * LOT_SLOT.width
     : OVERFLOW_LOT.aisleX + OVERFLOW_LOT.aisleWidth / 2 + (col - LOT_COLS_PER_SIDE + 0.5) * LOT_SLOT.width;
   return { x, y: 0, z: OVERFLOW_LOT.minZ + (row + 0.5) * LOT_SLOT.depth };
 }

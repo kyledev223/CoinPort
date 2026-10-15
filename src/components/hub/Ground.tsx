@@ -1,10 +1,13 @@
 import { Grid, Instance, Instances } from "@react-three/drei";
 import { useMemo } from "react";
 import { LOT_SLOT, OVERFLOW_LOT, ROAD_SEGMENTS, SLOT_SIZE, ZONES, ZONE_IDS, lotSlotPosition, type ZoneId } from "@/game";
+import { HUB_KEEP_OUT } from "./city/cityLayout";
 import { COLORS } from "./palette";
 
-/** Floor extent: comfortably past the camera's pan limits. */
-export const FLOOR = { center: [5, -8] as const, width: 280, depth: 230 };
+/** Floor extent: the whole city, up to the harbour's edge. */
+const FLOOR = { center: [15, -62] as const, width: 630, depth: 436 };
+/** The hub's grid lines stop at its fence, where the city begins. */
+const HUB_GRID = { center: [(HUB_KEEP_OUT.minX + HUB_KEEP_OUT.maxX) / 2, (HUB_KEEP_OUT.minZ + HUB_KEEP_OUT.maxZ) / 2] as const, width: HUB_KEEP_OUT.maxX - HUB_KEEP_OUT.minX, depth: HUB_KEEP_OUT.maxZ - HUB_KEEP_OUT.minZ };
 
 const ROAD_WIDTH = 6;
 const DASH = { length: 1.8, gap: 2.2, width: 0.18 };
@@ -19,8 +22,8 @@ export function Ground() {
         <meshStandardMaterial color={COLORS.floor} roughness={0.95} metalness={0.05} />
       </mesh>
       <Grid
-        position={[FLOOR.center[0], 0.01, FLOOR.center[1]]}
-        args={[FLOOR.width, FLOOR.depth]}
+        position={[HUB_GRID.center[0], 0.01, HUB_GRID.center[1]]}
+        args={[HUB_GRID.width, HUB_GRID.depth]}
         cellSize={4}
         cellThickness={0.6}
         cellColor="#1a222d"
@@ -168,12 +171,12 @@ function ParkingMarks() {
         }
       }
     }
-    // Overflow lot: a divider on each side of every lot slot.
+    // Overflow lot: bays face the aisle, so dividers run east–west between rows.
     for (let i = 0; ; i++) {
       const p = lotSlotPosition(i);
       if (p.z > OVERFLOW_LOT.maxZ) break;
-      for (const dx of [-LOT_SLOT.width / 2, LOT_SLOT.width / 2]) {
-        out.push({ position: [p.x + dx, 0.035, p.z], scale: [0.12, 0.02, LOT_SLOT.depth - 1.2] });
+      for (const dz of [-LOT_SLOT.depth / 2, LOT_SLOT.depth / 2]) {
+        out.push({ position: [p.x, 0.035, p.z + dz], scale: [LOT_SLOT.width - 1.2, 0.02, 0.12] });
       }
     }
     return out;
@@ -199,10 +202,15 @@ const LAMP_POSTS: Array<[number, number]> = [
   [-12, 37],
   [8, 37],
   [24, 37],
-  [40, 37],
+  [36, 38],
   [-74, 22],
   [-46, 40],
   [-42, -8],
+  // Along both edges of the overflow lot.
+  ...[-2, 20, 42, 64].flatMap((z): Array<[number, number]> => [
+    [37, z],
+    [95, z],
+  ]),
 ];
 
 function LampPosts() {

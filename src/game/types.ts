@@ -8,7 +8,7 @@
 
 export type Network = "mainnet-beta" | "devnet";
 
-/** A pump.fun token as the game sees it. Source-agnostic: mock and real feeds both produce this. */
+/** A pump.fun token as the game sees it. Source-agnostic: every CoinSource produces this. */
 export interface Coin {
   /** SPL mint address (base58). Primary key everywhere in the game. */
   mint: string;

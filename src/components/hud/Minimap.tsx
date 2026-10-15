@@ -6,7 +6,7 @@ import { cameraView } from "@/store/cameraView";
 import { useGameStore } from "@/store/gameStore";
 
 /** World area the minimap shows (plan view, north up). */
-const WORLD = { minX: -78, maxX: 92, minZ: -64, maxZ: 70 };
+const WORLD = { minX: -80, maxX: 132, minZ: -64, maxZ: 72 };
 const ASPECT = (WORLD.maxX - WORLD.minX) / (WORLD.maxZ - WORLD.minZ);
 
 const ZONE_COLOR: Record<ZoneKind, string> = {

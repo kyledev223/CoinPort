@@ -2,7 +2,7 @@ import { create } from "zustand";
 import {
   DISTRICTS,
   NO_FILTERS,
-  createSeedForklifts,
+  createForklifts,
   createWorld,
   sampleMotion,
   stepWorld,
@@ -40,8 +40,6 @@ export type Selection =
 
 export interface GameStore {
   status: "idle" | "loading" | "live" | "error";
-  /** From the connected source; drives the SIMULATED DATA badge. */
-  isSimulated: boolean;
   coins: Record<string, Coin>;
   /** When each coin last changed, epoch ms. */
   coinUpdatedAt: Record<string, number>;
@@ -89,10 +87,9 @@ let disconnectActive: (() => void) | null = null;
 
 export const useGameStore = create<GameStore>()((set, get) => ({
   status: "idle",
-  isSimulated: false,
   coins: {},
   coinUpdatedAt: {},
-  world: createWorld(createSeedForklifts(), 0),
+  world: createWorld(createForklifts(), 0),
   truckIndex: {},
   selection: null,
   followTruckId: null,
@@ -103,17 +100,16 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   viewerWallet: null,
 
   connect(source) {
-    // A new source replaces the old one: never mix (e.g. simulated) coins from two feeds.
+    // A new source replaces the old one: coins from two feeds never mix.
     disconnectActive?.();
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | undefined;
 
     set({
       status: "loading",
-      isSimulated: source.isSimulated,
       coins: {},
       coinUpdatedAt: {},
-      world: createWorld(createSeedForklifts(), Date.now()),
+      world: createWorld(createForklifts(), Date.now()),
       truckIndex: {},
       selection: null,
       followTruckId: null,

@@ -108,7 +108,7 @@ function LaunchCoinDialogBody({ onClose, onLaunch }: { onClose: () => void; onLa
     try {
       // TODO(launch): onLaunch is where the real launch flow plugs in (upload
       // image + metadata, build the pump.fun create transaction, wallet
-      // signature, send + confirm). Today HubView passes a simulated stub.
+      // signature, send + confirm). Today HubView passes a stub that declines.
       const result = await onLaunch(data, { approved: () => setStep("launching") });
       setStep("launching");
       setMint(result.mint);

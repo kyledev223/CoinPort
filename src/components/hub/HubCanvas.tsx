@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { useGameStore } from "@/store/gameStore";
+import { City } from "./city/City";
 import { Docks } from "./Docks";
 import { Forklifts } from "./ForkliftModel";
 import { Ground } from "./Ground";
@@ -37,6 +38,7 @@ export default function HubCanvas() {
       <LightPools />
       <GateFlash />
       <Ground />
+      <City />
       <Structures />
       <Docks />
       <Forklifts />

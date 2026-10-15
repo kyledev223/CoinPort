@@ -319,7 +319,7 @@ export interface AdvanceResult {
 }
 
 /**
- * One simulation tick: ensure one truck per coin, run transitions, hand out
+ * One game tick: ensure one truck per coin, run transitions, hand out
  * docks, lay out positions and report what changed. Trucks whose coin is
  * missing from `coins` are kept as they are.
  */
