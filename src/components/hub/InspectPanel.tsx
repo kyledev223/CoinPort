@@ -18,7 +18,7 @@ import {
   type TruckId,
 } from "@/game";
 import { selectCoinForTruck, useGameStore } from "@/store/gameStore";
-import { formatAge, formatAgo, formatClock, formatSol, formatUsd } from "./format";
+import { formatAge, formatAgo, formatClock, formatUsd } from "./format";
 import { coinColor } from "./palette";
 
 /** Side panel for whatever is selected in the scene. Reads the store, so it updates live. */
@@ -89,7 +89,7 @@ function TruckPanel({ id }: { id: TruckId }) {
       </div>
 
       <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-        <dt className="text-zinc-500">Mint</dt>
+        <dt className="text-zinc-500">CA</dt>
         <dd className="flex items-center gap-2 font-mono">
           <span title={coin.mint}>{shortAddress(coin.mint)}</span>
           <CopyButton text={coin.mint} />
@@ -110,10 +110,7 @@ function TruckPanel({ id }: { id: TruckId }) {
         <dd>{formatAge(now - coin.createdAt)}</dd>
       </dl>
 
-      <div className="grid grid-cols-2 gap-3">
-        <Stat label="Market cap">{formatSol(coin.marketCapSol)}</Stat>
-        <Stat label="USD">{coin.marketCapUsd !== undefined ? formatUsd(coin.marketCapUsd) : "—"}</Stat>
-      </div>
+      <Stat label="Market cap">{coin.marketCapUsd !== undefined ? formatUsd(coin.marketCapUsd) : "—"}</Stat>
 
       <div>
         <div className="mb-1.5 flex justify-between text-sm">
