@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+/* CoinPort is a single dark, industrial theme: near-black steel with amber light. */
+:root {
+  color-scheme: dark;
+  --background: #06090e;
+  --foreground: #e4e4e7;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --font-display: var(--font-chakra-petch);
+
+  /* HUD surfaces */
+  --color-hub: #06090e;
+  --color-panel: #0b0f15;
+  --color-panel-raised: #121821;
+  --color-edge: rgb(255 255 255 / 0.07);
+  --color-amber-glow: #ffb13b;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+/* Thin amber-tinted scrollbars inside HUD panels. */
+.hud-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(255 177 59 / 0.35) transparent;
+}
