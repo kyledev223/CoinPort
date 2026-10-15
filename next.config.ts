@@ -11,6 +11,8 @@ const SERVER_EXTERNAL = [
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
+  // No Next.js badge in the corner during development (errors still show).
+  devIndicators: false,
   partialPrefetching: true,
   serverExternalPackages: SERVER_EXTERNAL,
   // Make sure the launch API routes ship the pump SDK and its dependencies.
