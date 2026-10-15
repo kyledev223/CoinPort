@@ -40,7 +40,6 @@ function coin(overrides: Partial<Coin> = {}): Coin {
     metadataUri: "https://example.com/tst.json",
     creatorWallet: "Creator111",
     createdAt: NOW - 10 * 60_000,
-    network: "devnet",
     marketCapSol: 30,
     marketCapUsd: 4800,
     curveProgress: 0.1,

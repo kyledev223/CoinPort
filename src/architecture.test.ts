@@ -56,6 +56,18 @@ describe("architecture", () => {
     expect([...violations("src/game", noWalletRpcOrServer), ...violations("src/components/hub", noWalletRpcOrServer)]).toEqual([]);
   });
 
+  it("keeps server code out of the browser: only API routes and src/server import it", () => {
+    const found = [
+      ...violations("src/components", (_spec, path) => !path?.startsWith("src/server")),
+      ...violations("src/game", (_spec, path) => !path?.startsWith("src/server")),
+      ...violations("src/store", (_spec, path) => !path?.startsWith("src/server")),
+      ...violations("src/wallet", (_spec, path) => !path?.startsWith("src/server")),
+      ...violations("src/launch", (_spec, path) => !path?.startsWith("src/server")),
+      ...violations("src/coins", (_spec, path) => !path?.startsWith("src/server")),
+    ];
+    expect(found).toEqual([]);
+  });
+
   it("keeps src/game self-contained (no React, store or UI)", () => {
     const found = violations("src/game", (spec, path) => (path ? path.startsWith("src/game") : false));
     expect(found).toEqual([]);

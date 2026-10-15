@@ -97,7 +97,7 @@ function TruckPanel({ id }: { id: TruckId }) {
         <dt className="text-zinc-500">Creator</dt>
         <dd className="font-mono">
           <a
-            href={solscanAccountUrl(coin.creatorWallet, coin.network)}
+            href={solscanAccountUrl(coin.creatorWallet)}
             target="_blank"
             rel="noopener noreferrer"
             title={coin.creatorWallet}
@@ -108,8 +108,6 @@ function TruckPanel({ id }: { id: TruckId }) {
         </dd>
         <dt className="text-zinc-500">Age</dt>
         <dd>{formatAge(now - coin.createdAt)}</dd>
-        <dt className="text-zinc-500">Network</dt>
-        <dd>{coin.network === "devnet" ? "Devnet" : "Mainnet"}</dd>
       </dl>
 
       <div className="grid grid-cols-2 gap-3">

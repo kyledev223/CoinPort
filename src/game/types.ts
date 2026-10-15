@@ -6,8 +6,6 @@
  * `rules.ts`, laid out on the static map in `layout.ts`.
  */
 
-export type Network = "mainnet-beta" | "devnet";
-
 /** A pump.fun token as the game sees it. Source-agnostic: every CoinSource produces this. */
 export interface Coin {
   /** SPL mint address (base58). Primary key everywhere in the game. */
@@ -19,7 +17,6 @@ export interface Coin {
   creatorWallet: string;
   /** Launch time, epoch milliseconds. */
   createdAt: number;
-  network: Network;
   marketCapSol: number;
   /** Absent when no SOL/USD price is available yet. */
   marketCapUsd?: number;

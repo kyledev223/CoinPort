@@ -1,17 +1,3 @@
-import type { Network } from "@/game";
-
-/** "mainnet" or "mainnet-beta" (any case) → mainnet; anything else, including unset, → devnet. */
-export function parseNetwork(value: string | undefined): Network {
-  const v = value?.trim().toLowerCase();
-  return v === "mainnet" || v === "mainnet-beta" ? "mainnet-beta" : "devnet";
-}
-
-/**
- * The app's Solana network: the one value the network badge and explorer
- * links read. Set NEXT_PUBLIC_SOLANA_NETWORK=mainnet to switch.
- */
-export const APP_NETWORK: Network = parseNetwork(process.env.NEXT_PUBLIC_SOLANA_NETWORK);
-
 const BASE58_ADDRESS = /^[1-9A-HJ-NP-Za-km-z]{32,44}$/;
 
 /** A Solana address, or null if missing or malformed (so a typo never becomes a broken link). */

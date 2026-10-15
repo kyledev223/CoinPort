@@ -1,15 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseHttpsUrl, parseMint, parseNetwork, projectPumpFunUrl } from "./config";
-
-describe("parseNetwork", () => {
-  it("reads both mainnet spellings, in any case", () => {
-    for (const v of ["mainnet", "mainnet-beta", " MAINNET ", "Mainnet-Beta"]) expect(parseNetwork(v)).toBe("mainnet-beta");
-  });
-
-  it("defaults to devnet", () => {
-    for (const v of [undefined, "", "devnet", "testnet"]) expect(parseNetwork(v)).toBe("devnet");
-  });
-});
+import { parseHttpsUrl, parseMint, projectPumpFunUrl } from "./config";
 
 describe("project links", () => {
   const mint = "So11111111111111111111111111111111111111112";

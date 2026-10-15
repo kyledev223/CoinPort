@@ -3,7 +3,9 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { truckIdForMint } from "@/game";
 import { useGameStore } from "@/store/gameStore";
-import { CheckIcon, CloseIcon, ImageIcon, RocketIcon } from "../hud/icons";
+import { useConnectedWallet } from "@/wallet/useConnectedWallet";
+import { useWalletUi } from "@/wallet/walletUi";
+import { CheckIcon, CloseIcon, ImageIcon, RocketIcon, WalletIcon } from "../hud/icons";
 import {
   DESCRIPTION_MAX,
   EMPTY_LAUNCH_FORM,
@@ -15,7 +17,7 @@ import {
   validateLaunchForm,
   type LaunchFormData,
   type LaunchFormValues,
-} from "./launchForm";
+} from "@/shared/launchForm";
 
 export type LaunchStep = "details" | "approve" | "launching" | "arrived";
 
@@ -23,6 +25,8 @@ export type LaunchStep = "details" | "approve" | "launching" | "arrived";
 export interface LaunchProgress {
   /** The wallet signed; the indicator moves from "Approve in wallet" to "Launching". */
   approved(): void;
+  /** What the launch will cost (lamports, from the server's simulation), shown while the wallet asks. */
+  quoted?(costLamports: number): void;
 }
 
 export interface LaunchResult {
@@ -65,6 +69,9 @@ function LaunchCoinDialogBody({ onClose, onLaunch }: { onClose: () => void; onLa
   const [step, setStep] = useState<Exclude<LaunchStep, "arrived">>("details");
   const [mint, setMint] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
+  const [costSol, setCostSol] = useState<number | null>(null);
+  const wallet = useConnectedWallet();
+  const openWalletPicker = useWalletUi((s) => s.openPicker);
   const focusMint = useGameStore((s) => s.focusMint);
   const truckArrived = useGameStore((s) => (mint ? Boolean(s.truckIndex[truckIdForMint(mint)]) : false));
   const previewRef = useRef<string | null>(null);
@@ -104,12 +111,18 @@ function LaunchCoinDialogBody({ onClose, onLaunch }: { onClose: () => void; onLa
     setFailure(null);
     const data = toLaunchFormData(values);
     if (!data) return;
+    if (!wallet) {
+      openWalletPicker();
+      return;
+    }
     setStep("approve");
+    setCostSol(null);
     try {
-      // TODO(launch): onLaunch is where the real launch flow plugs in (upload
-      // image + metadata, build the pump.fun create transaction, wallet
-      // signature, send + confirm). Today HubView passes a stub that declines.
-      const result = await onLaunch(data, { approved: () => setStep("launching") });
+      // The real launch (sign-in, upload, build, wallet + mint signatures, relay, finalize): see src/launch/launchFlow.ts.
+      const result = await onLaunch(data, {
+        approved: () => setStep("launching"),
+        quoted: (lamports) => setCostSol(lamports / 1e9),
+      });
       setStep("launching");
       setMint(result.mint);
     } catch (err) {
@@ -143,6 +156,12 @@ function LaunchCoinDialogBody({ onClose, onLaunch }: { onClose: () => void; onLa
         </header>
 
         <StepIndicator current={current} />
+        {current === "details" && (
+          <p className="border-b border-edge bg-sky-400/5 px-5 py-2.5 text-xs text-sky-200/90">
+            <span className="font-bold text-sky-300">Solana mainnet.</span> This creates a real token on pump.fun. Your wallet pays the rent
+            and network fees (about 0.02–0.03 SOL) and you approve the transaction yourself. CoinPort never asks for your recovery phrase.
+          </p>
+        )}
 
         <div className="hud-scroll min-h-0 flex-1 overflow-y-auto px-5 py-4">
           {current === "details" && (
@@ -280,7 +299,9 @@ function LaunchCoinDialogBody({ onClose, onLaunch }: { onClose: () => void; onLa
               title={current === "approve" ? "Approve in your wallet" : "Launching…"}
               body={
                 current === "approve"
-                  ? "Confirm the transaction in your wallet. Keep this window open."
+                  ? costSol
+                    ? `Confirm in your wallet. This launch costs about ${costSol.toFixed(4)} SOL (rent and network fees). Keep this window open.`
+                    : "Sign in and confirm in your wallet when it asks. Keep this window open."
                   : mint
                     ? "Launched. Waiting for its truck to roll into the hub…"
                     : "Creating the coin. This can take a few seconds."
@@ -304,13 +325,23 @@ function LaunchCoinDialogBody({ onClose, onLaunch }: { onClose: () => void; onLa
               <button type="button" onClick={onClose} className="rounded-lg px-4 py-2 text-sm font-semibold text-zinc-300 hover:bg-white/5">
                 Cancel
               </button>
-              <button
-                type="submit"
-                form="launch-form"
-                className="flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 font-display text-sm font-bold tracking-wider text-black hover:bg-amber-300"
-              >
-                <RocketIcon /> LAUNCH
-              </button>
+              {wallet ? (
+                <button
+                  type="submit"
+                  form="launch-form"
+                  className="flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 font-display text-sm font-bold tracking-wider text-black hover:bg-amber-300"
+                >
+                  <RocketIcon /> LAUNCH
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={openWalletPicker}
+                  className="flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 font-display text-sm font-bold tracking-wider text-black hover:bg-amber-300"
+                >
+                  <WalletIcon /> CONNECT WALLET
+                </button>
+              )}
             </>
           )}
           {busy && <p className="text-xs text-zinc-500">Don&apos;t close this window.</p>}

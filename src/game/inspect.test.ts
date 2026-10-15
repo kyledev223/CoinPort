@@ -4,12 +4,10 @@ import { lifecycleSteps, pumpFunUrl, shortAddress, solscanAccountUrl, solscanTok
 describe("explorer links", () => {
   const mint = "So11111111111111111111111111111111111111112";
 
-  it("add ?cluster=devnet only on devnet", () => {
-    expect(pumpFunUrl({ mint, network: "devnet" })).toBe(`https://pump.fun/coin/${mint}?cluster=devnet`);
-    expect(pumpFunUrl({ mint, network: "mainnet-beta" })).toBe(`https://pump.fun/coin/${mint}`);
-    expect(solscanTokenUrl({ mint, network: "devnet" })).toBe(`https://solscan.io/token/${mint}?cluster=devnet`);
-    expect(solscanTokenUrl({ mint, network: "mainnet-beta" })).toBe(`https://solscan.io/token/${mint}`);
-    expect(solscanAccountUrl("abc", "devnet")).toBe("https://solscan.io/account/abc?cluster=devnet");
+  it("link to mainnet pages", () => {
+    expect(pumpFunUrl({ mint })).toBe(`https://pump.fun/coin/${mint}`);
+    expect(solscanTokenUrl({ mint })).toBe(`https://solscan.io/token/${mint}`);
+    expect(solscanAccountUrl("abc")).toBe("https://solscan.io/account/abc");
   });
 
   it("shortens addresses", () => {

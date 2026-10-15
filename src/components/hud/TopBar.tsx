@@ -1,29 +1,23 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
+import { useState, type ReactNode } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { APP_NETWORK } from "@/config";
-import { summarizeHub } from "@/game";
+import { shortAddress, summarizeHub } from "@/game";
+import { useWalletUi } from "@/wallet/walletUi";
 import { useGameStore } from "@/store/gameStore";
 import { formatSol, formatUsd } from "../hub/format";
 import { CapIcon, ChartIcon, LogoMark, RocketIcon, TruckIcon, WalletIcon } from "./icons";
 import { ProjectLinks } from "./ProjectLinks";
 
 export function TopBar({ onLaunchClick }: { onLaunchClick: () => void }) {
-  const feedDown = useGameStore((s) => s.status === "error");
   return (
     <header className="pointer-events-auto relative z-10 border-b border-amber-500/15 bg-panel/95 shadow-lg shadow-black/40 backdrop-blur">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-2.5 py-2 sm:gap-x-4 sm:px-3 lg:px-4">
         <Logo />
         <Kpis />
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          {feedDown && (
-            <div role="alert" className="flex h-10 items-center rounded-lg border border-red-500/50 bg-red-500/10 px-2.5 font-display text-xs font-bold tracking-wider text-red-300">
-              FEED OFFLINE
-            </div>
-          )}
           <ProjectLinks className="hidden lg:flex" />
-          <NetworkBadge />
           <WalletButton />
           <button
             type="button"
@@ -96,38 +90,51 @@ function Kpi({ icon, label, value, title }: { icon: ReactNode; label: string; va
   );
 }
 
-/** Always-visible network badge, read from the single APP_NETWORK config value. */
-function NetworkBadge() {
-  const devnet = APP_NETWORK === "devnet";
-  return (
-    <div
-      className="flex h-10 items-center gap-1.5 rounded-lg border border-edge bg-panel-raised/80 px-2 font-display text-xs font-bold tracking-wider sm:gap-2 sm:px-2.5 sm:text-sm"
-      title={`Solana ${devnet ? "devnet" : "mainnet"}`}
-    >
-      <span className={`h-2 w-2 rounded-full ${devnet ? "bg-emerald-400" : "bg-sky-400"} shadow-[0_0_8px_currentColor]`} />
-      <span className="text-zinc-100">{devnet ? "DEVNET" : "MAINNET"}</span>
-      <svg viewBox="0 0 16 12" className="hidden h-3 w-4 text-emerald-400 sm:block" aria-hidden="true">
-        {[0, 1, 2, 3].map((i) => (
-          <rect key={i} x={i * 4} y={9 - i * 3} width="2.5" height={3 + i * 3} fill="currentColor" rx="0.5" />
-        ))}
-      </svg>
-    </div>
-  );
-}
-
 function WalletButton() {
-  // TODO(wallet): placeholder. Open the wallet adapter's connect modal here and
-  // show the connected address; useConnectedWallet() should then return it.
+  const { publicKey, connecting, disconnect } = useWallet();
+  const openPicker = useWalletUi((s) => s.openPicker);
+  const [menu, setMenu] = useState(false);
+  const address = publicKey?.toBase58();
+
+  if (!address) {
+    return (
+      <button
+        type="button"
+        onClick={openPicker}
+        className="flex h-10 items-center gap-2 rounded-lg border border-amber-400/60 px-2 font-display text-sm font-bold tracking-wider text-amber-200 transition hover:bg-amber-400/10 sm:px-2.5"
+      >
+        <WalletIcon className="text-lg" />
+        <span className="hidden md:inline 2xl:hidden min-[1800px]:inline">{connecting ? "CONNECTING…" : "CONNECT WALLET"}</span>
+      </button>
+    );
+  }
   return (
-    <button
-      type="button"
-      aria-disabled="true"
-      title="Wallet connection isn't available yet"
-      onClick={(e) => e.preventDefault()}
-      className="flex h-10 cursor-not-allowed items-center gap-2 rounded-lg border border-amber-400/40 px-2 sm:px-2.5 font-display text-sm font-bold tracking-wider text-amber-200/80"
-    >
-      <WalletIcon className="text-lg" />
-      <span className="hidden md:inline 2xl:hidden min-[1800px]:inline">CONNECT WALLET</span>
-    </button>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setMenu((m) => !m)}
+        aria-expanded={menu}
+        title={address}
+        className="flex h-10 items-center gap-2 rounded-lg border border-emerald-400/50 bg-emerald-400/10 px-2 font-mono text-xs font-semibold text-emerald-200 sm:px-2.5"
+      >
+        <WalletIcon className="text-lg" />
+        <span className="hidden md:inline">{shortAddress(address)}</span>
+      </button>
+      {menu && (
+        <div className="absolute top-12 right-0 z-20 w-44 rounded-lg border border-edge bg-panel p-1 shadow-xl shadow-black/50">
+          <button
+            type="button"
+            onClick={() => {
+              setMenu(false);
+              void fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+              void disconnect();
+            }}
+            className="w-full rounded-md px-3 py-2 text-left text-sm text-zinc-200 hover:bg-white/5"
+          >
+            Disconnect
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

@@ -20,7 +20,6 @@ function coin(mint: string, overrides: Partial<Coin> = {}): Coin {
     metadataUri: "",
     creatorWallet: "w",
     createdAt: T0 - 3_600_000,
-    network: "devnet",
     marketCapSol: 30,
     curveProgress: 0.1,
     graduated: false,

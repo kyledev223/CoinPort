@@ -1,26 +1,22 @@
 /** Pure helpers for the inspect panel: explorer links, address shortening, lifecycle stepper. */
 
-import type { Coin, Network, Truck, TruckState } from "./types";
+import type { Coin, Truck, TruckState } from "./types";
 import type { TruckHistory } from "./world";
 
 export function shortAddress(address: string, chars = 4): string {
   return address.length <= chars * 2 + 1 ? address : `${address.slice(0, chars)}…${address.slice(-chars)}`;
 }
 
-function clusterQuery(network: Network): string {
-  return network === "devnet" ? "?cluster=devnet" : "";
+export function pumpFunUrl(coin: Pick<Coin, "mint">): string {
+  return `https://pump.fun/coin/${coin.mint}`;
 }
 
-export function pumpFunUrl(coin: Pick<Coin, "mint" | "network">): string {
-  return `https://pump.fun/coin/${coin.mint}${clusterQuery(coin.network)}`;
+export function solscanTokenUrl(coin: Pick<Coin, "mint">): string {
+  return `https://solscan.io/token/${coin.mint}`;
 }
 
-export function solscanTokenUrl(coin: Pick<Coin, "mint" | "network">): string {
-  return `https://solscan.io/token/${coin.mint}${clusterQuery(coin.network)}`;
-}
-
-export function solscanAccountUrl(address: string, network: Network): string {
-  return `https://solscan.io/account/${address}${clusterQuery(network)}`;
+export function solscanAccountUrl(address: string): string {
+  return `https://solscan.io/account/${address}`;
 }
 
 export type StepStatus = "done" | "current" | "pending";

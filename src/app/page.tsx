@@ -1,4 +1,4 @@
-import { HubView } from "@/components/hub/HubView";
+import { HubView } from "@/components/HubView";
 
 export default function Home() {
   return (
