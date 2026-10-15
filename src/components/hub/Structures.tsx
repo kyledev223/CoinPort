@@ -135,7 +135,7 @@ function LaunchBay() {
       <LightStrip position={[center.x, 7.75, frontZ + 0.4]} scale={[size.width, 0.14, 0.2]} />
 
 
-      <Instances limit={crates.length} castShadow receiveShadow>
+      <Instances limit={crates.length} frames={1} castShadow receiveShadow>
         <boxGeometry args={[1.4, 1.4, 1.4]} />
         <meshStandardMaterial roughness={0.7} />
         {crates.map((c, i) => (
@@ -212,14 +212,14 @@ function StorageHall({ zoneId }: { zoneId: StorageZoneId }) {
       <LightStrip position={[center.x, HALL.height - 3.1, z0 + 2.2]} scale={[size.width, 0.12, 0.15]} />
       <pointLight position={[center.x, HALL.height - 2, z0 - 3]} color={COLORS.amber} intensity={420} distance={28} decay={2} />
 
-      <Instances limit={steel.length} castShadow receiveShadow>
+      <Instances limit={steel.length} frames={1} castShadow receiveShadow>
         <boxGeometry />
         <meshStandardMaterial color={COLORS.steel} roughness={0.5} metalness={0.6} />
         {steel.map((s, i) => (
           <Instance key={i} position={s.position} scale={s.scale} />
         ))}
       </Instances>
-      <Instances limit={crates.length} castShadow receiveShadow>
+      <Instances limit={crates.length} frames={1} castShadow receiveShadow>
         <boxGeometry args={[1.6, 1.5, 1.6]} />
         <meshStandardMaterial roughness={0.7} />
         {crates.map((c, i) => (

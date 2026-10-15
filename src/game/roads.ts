@@ -4,7 +4,7 @@
  * gets there.
  */
 
-import { DOCKS, EXIT_POSITION, ZONES } from "./layout";
+import { DOCKS, EXIT_POSITION, OVERFLOW_LOT, ZONES, inOverflowLot } from "./layout";
 import type { DockId, ZoneId } from "./types";
 
 export interface Waypoint {
@@ -44,6 +44,9 @@ const nodes: Record<string, Waypoint> = {
   gradGate: { x: gradZone.center.x, z: gradZone.center.z - 3 },
   gradOut: { x: gradZone.center.x, z: GRADUATION_ARCH_Z - 12 },
   exit: { x: EXIT_POSITION.x, z: EXIT_POSITION.z },
+  // Overflow lot: gate on the avenue, aisle running south through the lot.
+  lot: { x: OVERFLOW_LOT.aisleX, z: AVENUE_Z },
+  lotEnd: { x: OVERFLOW_LOT.aisleX, z: OVERFLOW_LOT.maxZ },
 };
 
 const edges: Array<[string, string]> = [
@@ -59,6 +62,8 @@ const edges: Array<[string, string]> = [
   ["avGrad", "gradGate"],
   ["gradGate", "gradOut"],
   ["gradOut", "exit"],
+  ["avGrad", "lot"],
+  ["lot", "lotEnd"],
 ];
 
 for (const dock of DOCKS) {
@@ -155,9 +160,20 @@ export function routeBetween(
   target: { zoneId: ZoneId | null; dockId: DockId | null },
 ): Waypoint[] {
   const last: Waypoint = { x: to.x, z: to.z, reverse: target.dockId !== null };
-  if (!target.dockId && target.zoneId && insideZone(from, target.zoneId)) return [last];
-  const start = nearestNode(from);
-  const end = accessNode(target.zoneId, target.dockId);
+  const fromLot = inOverflowLot(from);
+  const toLot = inOverflowLot(to);
+  // Inside the lot, trucks use the aisle to reach their row.
+  const aisle = (z: number): Waypoint => ({ x: OVERFLOW_LOT.aisleX, z });
+  if (fromLot && toLot) return [aisle(from.z), aisle(to.z), last];
+  if (!toLot && !target.dockId && target.zoneId && insideZone(from, target.zoneId)) return [last];
+
+  const start = fromLot ? "lot" : nearestNode(from);
+  const end = toLot ? "lot" : accessNode(target.zoneId, target.dockId);
   const via = start === end ? [nodes[end]] : shortestPath(start, end).map((id) => nodes[id]);
-  return [...via.map(({ x, z }) => ({ x, z })), last];
+  return [
+    ...(fromLot ? [aisle(from.z)] : []),
+    ...via.map(({ x, z }) => ({ x, z })),
+    ...(toLot ? [aisle(to.z)] : []),
+    last,
+  ];
 }

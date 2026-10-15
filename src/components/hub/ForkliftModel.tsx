@@ -1,13 +1,13 @@
 import { useCursor } from "@react-three/drei";
 import { useFrame, type ThreeEvent } from "@react-three/fiber";
-import { memo, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useShallow } from "zustand/react/shallow";
 import { forkliftPose, type ForkliftId } from "@/game";
 import { selectIsSelected, useGameStore } from "@/store/gameStore";
-import { crateTexture } from "./Docks";
 import { COLORS } from "./palette";
 import { CLICK_SLOP, OutlineBox, SelectionRing } from "./Selection";
+import { acquireCrateTexture, releaseCrateTexture } from "./textures";
 
 const GEO = {
   box: new THREE.BoxGeometry(1, 1, 1),
@@ -15,6 +15,8 @@ const GEO = {
   guard: new THREE.BoxGeometry(1.25, 0.08, 1.2),
   wheel: new THREE.CylinderGeometry(0.3, 0.3, 0.25, 10).rotateZ(Math.PI / 2),
 };
+
+const PLAIN_CRATE = "#b98a4a";
 
 /** Fork travel from floor to top (m). */
 const FORK_TRAVEL = 1.6;
@@ -46,7 +48,22 @@ const ForkliftModel = memo(function ForkliftModel({ id }: { id: ForkliftId }) {
   const select = useGameStore((s) => s.select);
   const [hovered, setHovered] = useState(false);
   useCursor(hovered);
-  const crateMap = useMemo(() => (cargoSymbol ? crateTexture(cargoSymbol) : null), [cargoSymbol]);
+  const crateMaterial = useRef<THREE.MeshStandardMaterial>(null);
+
+  // Stamp the carried crate with the truck's ticker; the shared texture is released when the job ends.
+  useEffect(() => {
+    const m = crateMaterial.current;
+    if (!m || !cargoSymbol) return;
+    m.map = acquireCrateTexture(cargoSymbol);
+    m.color.set("#ffffff");
+    m.needsUpdate = true;
+    return () => {
+      m.map = null;
+      m.color.set(PLAIN_CRATE);
+      m.needsUpdate = true;
+      releaseCrateTexture(cargoSymbol);
+    };
+  }, [cargoSymbol]);
 
   useFrame(() => {
     if (!forklift || !motion || !body.current || !forks.current) return;
@@ -112,11 +129,7 @@ const ForkliftModel = memo(function ForkliftModel({ id }: { id: ForkliftId }) {
           </mesh>
         ))}
         <mesh ref={crate} geometry={GEO.box} position={[0, 0.5, -1.45]} scale={[1, 0.9, 1]} castShadow visible={false}>
-          {crateMap ? (
-            <meshStandardMaterial map={crateMap} roughness={0.8} />
-          ) : (
-            <meshStandardMaterial color="#b98a4a" roughness={0.8} />
-          )}
+          <meshStandardMaterial ref={crateMaterial} color={PLAIN_CRATE} roughness={0.8} />
         </mesh>
       </group>
       {[

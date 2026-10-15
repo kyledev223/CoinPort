@@ -14,7 +14,7 @@ export const CAMERA_START_DISTANCE = 125;
 export const CAMERA_TARGET: [number, number, number] = [-2, 0, -6];
 
 /** The camera's look-at point stays inside this box, so the hub never leaves the screen. */
-export const PAN_BOUNDS = { minX: -70, maxX: 75, minZ: -55, maxZ: 40 };
+const PAN_BOUNDS = { minX: -70, maxX: 75, minZ: -55, maxZ: 40 };
 const MIN_DISTANCE = 30;
 const MAX_DISTANCE = 190;
 /** Pointer travel (px) that counts as the user panning, which ends Follow and glides. */
@@ -49,6 +49,8 @@ const floor = new Plane(new Vector3(0, 1, 0), 0);
 const raycaster = new Raycaster();
 const corner = new Vector2();
 const hit = new Vector3();
+/** Reused footprint points, so publishing the view allocates nothing per frame. */
+const FOOTPRINT: Array<{ x: number; z: number }> = [];
 const CORNERS: Array<[number, number]> = [
   [-1, -1],
   [1, -1],
@@ -143,13 +145,16 @@ export function StrategyControls() {
     }
 
     // Publish what's on screen for the minimap.
-    cameraView.target.x = c.target.x;
-    cameraView.target.z = c.target.z;
-    cameraView.footprint = [];
-    for (const [nx, ny] of CORNERS) {
+    const fp = cameraView.footprint;
+    fp.length = 0;
+    CORNERS.forEach(([nx, ny], i) => {
       raycaster.setFromCamera(corner.set(nx, ny), camera);
-      if (raycaster.ray.intersectPlane(floor, hit)) cameraView.footprint.push({ x: hit.x, z: hit.z });
-    }
+      if (!raycaster.ray.intersectPlane(floor, hit)) return;
+      const p = (FOOTPRINT[i] ??= { x: 0, z: 0 });
+      p.x = hit.x;
+      p.z = hit.z;
+      fp.push(p);
+    });
   });
 
   return (

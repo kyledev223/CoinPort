@@ -27,6 +27,12 @@ export function HubView() {
   useEffect(() => {
     const source = new MockCoinSource({ network: APP_NETWORK });
     sourceRef.current = source;
+    // Development only (dropped from production builds): lets scripted checks
+    // (stress tests, badge checks) plug their own CoinSource into the store.
+    if (process.env.NODE_ENV !== "production") {
+      const w = window as unknown as { __coinport?: Record<string, unknown> };
+      w.__coinport = { ...w.__coinport, store: useGameStore };
+    }
     return useGameStore.getState().connect(source);
   }, []);
 

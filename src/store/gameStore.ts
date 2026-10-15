@@ -56,6 +56,11 @@ export interface GameStore {
   filters: TruckFilters;
   /** Mint to focus as soon as its truck exists (e.g. right after a launch). */
   pendingFocusMint: string | null;
+  /**
+   * The viewer's connected wallet, for "My coins". Set by the HUD from the
+   * wallet hook, so the scene never imports wallet code.
+   */
+  viewerWallet: string | null;
 
   /** Start feeding the store from `source`. Returns the disconnect function. */
   connect(source: CoinSource): () => void;
@@ -71,6 +76,7 @@ export interface GameStore {
   /** The user dragged the map: drop follow, district highlight and any pending focus. */
   userPanned(): void;
   setFilters(patch: Partial<TruckFilters>): void;
+  setViewerWallet(wallet: string | null): void;
 }
 
 function indexTrucks(trucks: readonly Truck[]): Record<TruckId, Truck> {
@@ -78,6 +84,8 @@ function indexTrucks(trucks: readonly Truck[]): Record<TruckId, Truck> {
 }
 
 let nonce = 0;
+/** Tears down the current source, so two sources can never feed the store at once. */
+let disconnectActive: (() => void) | null = null;
 
 export const useGameStore = create<GameStore>()((set, get) => ({
   status: "idle",
@@ -92,8 +100,11 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   district: null,
   filters: NO_FILTERS,
   pendingFocusMint: null,
+  viewerWallet: null,
 
   connect(source) {
+    // A new source replaces the old one: never mix (e.g. simulated) coins from two feeds.
+    disconnectActive?.();
     let cancelled = false;
     let timer: ReturnType<typeof setInterval> | undefined;
 
@@ -151,11 +162,15 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         if (!cancelled) set({ status: "error" });
       });
 
-    return () => {
+    const disconnect = () => {
+      if (cancelled) return;
       cancelled = true;
       unsubscribe();
       clearInterval(timer);
+      if (disconnectActive === disconnect) disconnectActive = null;
     };
+    disconnectActive = disconnect;
+    return disconnect;
   },
 
   select(selection) {
@@ -203,6 +218,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
   setFilters(patch) {
     set((s) => ({ filters: { ...s.filters, ...patch } }));
+  },
+
+  setViewerWallet(viewerWallet) {
+    if (get().viewerWallet !== viewerWallet) set({ viewerWallet });
   },
 }));
 

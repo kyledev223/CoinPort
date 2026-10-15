@@ -10,7 +10,7 @@ import {
   UNLOAD_MS,
   YARD_MAX_WAIT_MS,
 } from "./constants";
-import { DOCKS, EXIT_POSITION } from "./layout";
+import { DOCKS, EXIT_POSITION, ZONES, inOverflowLot, zoneCapacity } from "./layout";
 import {
   advanceTrucks,
   assignDocks,
@@ -294,6 +294,39 @@ describe("layoutTrucks", () => {
     expect(a.position).toEqual(DOCKS[2].position);
     expect(b.position).toEqual(EXIT_POSITION);
     expect(c.position).not.toEqual(d.position);
+  });
+
+  const stored = (n: number, launchedAgoMs: number) => ({
+    truck: truck({ id: `truck:s${n}`, mint: `s${n}`, zoneId: "storage-a", stateChangedAt: NOW - n }),
+    coin: coin({ mint: `s${n}`, createdAt: NOW - launchedAgoMs }),
+  });
+
+  it("caps a storage hall at its footprint and parks the oldest coins in the overflow lot", () => {
+    const capacity = zoneCapacity("storage-a");
+    const fleet = Array.from({ length: capacity + 5 }, (_, n) => stored(n, n * 60_000));
+    const laid = layoutTrucks(
+      fleet.map((f) => f.truck),
+      new Map(fleet.map((f) => [f.coin.mint, f.coin])),
+    );
+    const inLot = laid.filter((t) => inOverflowLot(t.position));
+    expect(inLot).toHaveLength(5);
+    // The five oldest launches are the ones parked out.
+    expect(inLot.map((t) => t.mint).sort()).toEqual(fleet.slice(capacity).map((f) => f.coin.mint).sort());
+    // They keep their tier, and every truck has its own spot.
+    expect(inLot.every((t) => t.zoneId === "storage-a")).toBe(true);
+    expect(new Set(laid.map((t) => `${t.position.x},${t.position.z}`)).size).toBe(laid.length);
+    // Nobody in the hall spills out of its footprint onto the avenue.
+    const hall = ZONES["storage-a"];
+    for (const t of laid.filter((x) => !inOverflowLot(x.position))) {
+      expect(Math.abs(t.position.z - hall.center.z)).toBeLessThanOrEqual(hall.size.depth / 2);
+    }
+  });
+
+  it("keeps trucks in their slots when another truck leaves", () => {
+    const fleet = Array.from({ length: 6 }, (_, n) => stored(n, n * 60_000));
+    const before = layoutTrucks(fleet.map((f) => f.truck));
+    const after = layoutTrucks(before.filter((t) => t.mint !== "s0"));
+    for (const t of after) expect(t.position).toEqual(before.find((b) => b.id === t.id)!.position);
   });
 });
 

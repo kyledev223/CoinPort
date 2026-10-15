@@ -1,6 +1,6 @@
 import { Grid, Instance, Instances } from "@react-three/drei";
 import { useMemo } from "react";
-import { ROAD_SEGMENTS, SLOT_SIZE, ZONES, ZONE_IDS, type ZoneId } from "@/game";
+import { LOT_SLOT, OVERFLOW_LOT, ROAD_SEGMENTS, SLOT_SIZE, ZONES, ZONE_IDS, lotSlotPosition, type ZoneId } from "@/game";
 import { COLORS } from "./palette";
 
 /** Floor extent: comfortably past the camera's pan limits. */
@@ -32,9 +32,7 @@ export function Ground() {
         infiniteGrid={false}
       />
       <Roads />
-      {ZONE_IDS.map((id) => (
-        <ZonePad key={id} zoneId={id} />
-      ))}
+      <ZonePads />
       <ParkingMarks />
       <LampPosts />
     </group>
@@ -69,14 +67,14 @@ function Roads() {
 
   return (
     <group>
-      <Instances limit={strips.length} receiveShadow>
+      <Instances limit={strips.length} frames={1} receiveShadow>
         <boxGeometry args={[1, 0.001, 1]} />
         <meshStandardMaterial color="#0a0e13" roughness={1} />
         {strips.map((b, i) => (
           <Instance key={i} position={b.position} scale={b.scale} rotation-y={b.rotationY} />
         ))}
       </Instances>
-      <Instances limit={dashes.length}>
+      <Instances limit={dashes.length} frames={1}>
         <boxGeometry />
         <meshStandardMaterial color="#c9a04a" emissive="#c9a04a" emissiveIntensity={0.25} />
         {dashes.map((b, i) => (
@@ -87,27 +85,65 @@ function Roads() {
   );
 }
 
-function ZonePad({ zoneId }: { zoneId: ZoneId }) {
-  const { center, size } = ZONES[zoneId];
-  const edge = 0.25;
-  const edges: Box[] = [
-    { position: [center.x, 0.04, center.z - size.depth / 2], scale: [size.width, 0.04, edge] },
-    { position: [center.x, 0.04, center.z + size.depth / 2], scale: [size.width, 0.04, edge] },
-    { position: [center.x - size.width / 2, 0.04, center.z], scale: [edge, 0.04, size.depth] },
-    { position: [center.x + size.width / 2, 0.04, center.z], scale: [edge, 0.04, size.depth] },
-  ];
+/** A rectangle on the floor, by its edges. */
+interface Area {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+
+const zoneArea = (id: ZoneId): Area => {
+  const { center, size } = ZONES[id];
+  return {
+    minX: center.x - size.width / 2,
+    maxX: center.x + size.width / 2,
+    minZ: center.z - size.depth / 2,
+    maxZ: center.z + size.depth / 2,
+  };
+};
+
+/** Every zone plus the overflow lot. */
+const PAD_AREAS: Area[] = [...ZONE_IDS.map(zoneArea), OVERFLOW_LOT];
+
+/** Floor pads with amber edge lines, one instanced mesh each. */
+function ZonePads() {
+  const { pads, edges } = useMemo(() => {
+    const pads: Box[] = [];
+    const edges: Box[] = [];
+    const e = 0.25;
+    for (const a of PAD_AREAS) {
+      const w = a.maxX - a.minX;
+      const d = a.maxZ - a.minZ;
+      const cx = (a.minX + a.maxX) / 2;
+      const cz = (a.minZ + a.maxZ) / 2;
+      pads.push({ position: [cx, 0.02, cz], scale: [w, 1, d] });
+      edges.push(
+        { position: [cx, 0.04, a.minZ], scale: [w, 0.04, e] },
+        { position: [cx, 0.04, a.maxZ], scale: [w, 0.04, e] },
+        { position: [a.minX, 0.04, cz], scale: [e, 0.04, d] },
+        { position: [a.maxX, 0.04, cz], scale: [e, 0.04, d] },
+      );
+    }
+    return { pads, edges };
+  }, []);
+
   return (
     <group>
-      <mesh rotation-x={-Math.PI / 2} position={[center.x, 0.02, center.z]} receiveShadow>
-        <planeGeometry args={[size.width, size.depth]} />
+      <Instances limit={pads.length} frames={1} receiveShadow>
+        <boxGeometry args={[1, 0.001, 1]} />
         <meshStandardMaterial color={COLORS.pad} roughness={0.85} />
-      </mesh>
-      {edges.map((b, i) => (
-        <mesh key={i} position={b.position} scale={b.scale}>
-          <boxGeometry />
-          <meshStandardMaterial color={COLORS.padEdge} emissive={COLORS.padEdge} emissiveIntensity={0.35} />
-        </mesh>
-      ))}
+        {pads.map((b, i) => (
+          <Instance key={i} position={b.position} scale={b.scale} />
+        ))}
+      </Instances>
+      <Instances limit={edges.length} frames={1}>
+        <boxGeometry />
+        <meshStandardMaterial color={COLORS.padEdge} emissive={COLORS.padEdge} emissiveIntensity={0.35} />
+        {edges.map((b, i) => (
+          <Instance key={i} position={b.position} scale={b.scale} />
+        ))}
+      </Instances>
     </group>
   );
 }
@@ -132,11 +168,19 @@ function ParkingMarks() {
         }
       }
     }
+    // Overflow lot: a divider on each side of every lot slot.
+    for (let i = 0; ; i++) {
+      const p = lotSlotPosition(i);
+      if (p.z > OVERFLOW_LOT.maxZ) break;
+      for (const dx of [-LOT_SLOT.width / 2, LOT_SLOT.width / 2]) {
+        out.push({ position: [p.x + dx, 0.035, p.z], scale: [0.12, 0.02, LOT_SLOT.depth - 1.2] });
+      }
+    }
     return out;
   }, []);
 
   return (
-    <Instances limit={lines.length}>
+    <Instances limit={lines.length} frames={1}>
       <boxGeometry />
       <meshStandardMaterial color="#4a5363" roughness={0.9} />
       {lines.map((b, i) => (
@@ -164,14 +208,14 @@ const LAMP_POSTS: Array<[number, number]> = [
 function LampPosts() {
   return (
     <group>
-      <Instances limit={LAMP_POSTS.length} castShadow>
+      <Instances limit={LAMP_POSTS.length} frames={1} castShadow>
         <cylinderGeometry args={[0.14, 0.18, 8, 6]} />
         <meshStandardMaterial color={COLORS.steel} roughness={0.6} metalness={0.4} />
         {LAMP_POSTS.map(([x, z], i) => (
           <Instance key={i} position={[x, 4, z]} />
         ))}
       </Instances>
-      <Instances limit={LAMP_POSTS.length}>
+      <Instances limit={LAMP_POSTS.length} frames={1}>
         <boxGeometry args={[0.7, 0.25, 0.7]} />
         <meshStandardMaterial color={COLORS.bulb} emissive={COLORS.bulb} emissiveIntensity={3} toneMapped={false} />
         {LAMP_POSTS.map(([x, z], i) => (

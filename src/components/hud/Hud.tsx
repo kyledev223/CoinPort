@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { isFiltering } from "@/game";
 import { useGameStore } from "@/store/gameStore";
+import { useConnectedWallet } from "@/wallet/useConnectedWallet";
 import { InspectPanel } from "../hub/InspectPanel";
 import { LaunchCoinDialog, type OnLaunch } from "../launch/LaunchCoinDialog";
 import { ActivityFeed } from "./ActivityFeed";
@@ -22,6 +23,10 @@ type Drawer = "filters" | "activity" | "map";
 export function Hud({ onLaunch }: { onLaunch: OnLaunch }) {
   const wide = useMediaQuery("(min-width: 1024px)");
   const [launchOpen, setLaunchOpen] = useState(false);
+
+  // The HUD is the only place that reads the wallet; everything else gets it from the store.
+  const wallet = useConnectedWallet();
+  useEffect(() => useGameStore.getState().setViewerWallet(wallet), [wallet]);
 
   return (
     <div className="pointer-events-none absolute inset-0 flex flex-col">

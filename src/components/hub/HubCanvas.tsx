@@ -7,7 +7,7 @@ import { GateFlash, LightPools, SceneLights } from "./Lighting";
 import { COLORS } from "./palette";
 import { StrategyControls, cameraStartPosition } from "./StrategyControls";
 import { Structures } from "./Structures";
-import { Trucks } from "./TruckModel";
+import { TruckFleet } from "./TruckFleet";
 
 // Stable object: R3F rebuilds the camera if these options change between renders.
 const CAMERA = { fov: 32, near: 1, far: 700, position: cameraStartPosition() };
@@ -23,6 +23,13 @@ export default function HubCanvas() {
       gl={{ antialias: true }}
       // A click (not a drag) on empty floor clears the selection.
       onPointerMissed={() => useGameStore.getState().select(null)}
+      onCreated={({ gl }) => {
+        // Development only: renderer stats for the stress-test script.
+        if (process.env.NODE_ENV !== "production") {
+          const w = window as unknown as { __coinport?: Record<string, unknown> };
+          w.__coinport = { ...w.__coinport, gl };
+        }
+      }}
     >
       <color attach="background" args={[COLORS.background]} />
       <fog attach="fog" args={[COLORS.background, 180, 380]} />
@@ -33,7 +40,7 @@ export default function HubCanvas() {
       <Structures />
       <Docks />
       <Forklifts />
-      <Trucks />
+      <TruckFleet />
       <StrategyControls />
     </Canvas>
   );

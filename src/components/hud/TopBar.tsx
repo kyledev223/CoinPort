@@ -10,12 +10,18 @@ import { CapIcon, ChartIcon, LogoMark, RocketIcon, TruckIcon, WalletIcon } from 
 
 export function TopBar({ onLaunchClick }: { onLaunchClick: () => void }) {
   const simulated = useGameStore((s) => s.isSimulated);
+  const feedDown = useGameStore((s) => s.status === "error");
   return (
     <header className="pointer-events-auto relative z-10 border-b border-amber-500/15 bg-panel/95 shadow-lg shadow-black/40 backdrop-blur">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-2.5 py-2 sm:gap-x-4 sm:px-3 lg:px-4">
         <Logo />
         <Kpis />
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
+          {feedDown && (
+            <div role="alert" className="flex h-10 items-center rounded-lg border border-red-500/50 bg-red-500/10 px-2.5 font-display text-xs font-bold tracking-wider text-red-300">
+              FEED OFFLINE
+            </div>
+          )}
           {simulated && <SimulatedBadge className="hidden sm:flex" />}
           <NetworkBadge />
           <WalletButton />

@@ -1,13 +1,12 @@
 "use client";
 
 import { useEffect, useRef, type MouseEvent } from "react";
-import { DOCKS, ROAD_SEGMENTS, ZONES, ZONE_IDS, matchesTruckFilters, sampleMotion, type ZoneKind } from "@/game";
+import { DOCKS, OVERFLOW_LOT, ROAD_SEGMENTS, ZONES, ZONE_IDS, matchesTruckFilters, sampleMotion, type ZoneKind } from "@/game";
 import { cameraView } from "@/store/cameraView";
 import { useGameStore } from "@/store/gameStore";
-import { useConnectedWallet } from "@/wallet/useConnectedWallet";
 
 /** World area the minimap shows (plan view, north up). */
-const WORLD = { minX: -78, maxX: 92, minZ: -64, maxZ: 46 };
+const WORLD = { minX: -78, maxX: 92, minZ: -64, maxZ: 70 };
 const ASPECT = (WORLD.maxX - WORLD.minX) / (WORLD.maxZ - WORLD.minZ);
 
 const ZONE_COLOR: Record<ZoneKind, string> = {
@@ -23,17 +22,13 @@ const LEGEND: Array<{ label: string; color: string }> = [
   { label: "Launch Bay", color: ZONE_COLOR["launch-bay"] },
   { label: "Warehouses", color: ZONE_COLOR.storage },
   { label: "Graduation", color: ZONE_COLOR.graduation },
+  { label: "Overflow Lot", color: ZONE_COLOR.yard },
   { label: "Trucks", color: "#ffffff" },
 ];
 
 /** Live plan view: zones, roads, truck dots and the camera's view. Click to glide there. */
 export function Minimap({ showLegend = true }: { showLegend?: boolean }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const wallet = useConnectedWallet();
-  const walletRef = useRef(wallet);
-  useEffect(() => {
-    walletRef.current = wallet;
-  }, [wallet]);
 
   useEffect(() => {
     const el = canvas.current;
@@ -80,6 +75,13 @@ export function Minimap({ showLegend = true }: { showLegend?: boolean }) {
         ctx.lineWidth = 1;
         ctx.strokeRect(x + 0.5, y + 0.5, size.width * sx - 1, size.depth * sz - 1);
       }
+      {
+        const lot = OVERFLOW_LOT;
+        ctx.fillStyle = `${ZONE_COLOR.yard}26`;
+        ctx.fillRect(px(lot.minX), pz(lot.minZ), (lot.maxX - lot.minX) * sx, (lot.maxZ - lot.minZ) * sz);
+        ctx.strokeStyle = ZONE_COLOR.yard;
+        ctx.strokeRect(px(lot.minX) + 0.5, pz(lot.minZ) + 0.5, (lot.maxX - lot.minX) * sx - 1, (lot.maxZ - lot.minZ) * sz - 1);
+      }
       ctx.fillStyle = ZONE_COLOR["launch-bay"];
       for (const d of DOCKS) ctx.fillRect(px(d.position.x) - 1.5, pz(d.position.z - 4) - 1, 3, 2);
 
@@ -90,7 +92,7 @@ export function Minimap({ showLegend = true }: { showLegend?: boolean }) {
         const m = s.world.motions[t.id];
         if (!m) continue;
         const pose = sampleMotion(m, now);
-        const visible = matchesTruckFilters(t, s.coins[t.mint], s.filters, walletRef.current);
+        const visible = matchesTruckFilters(t, s.coins[t.mint], s.filters, s.viewerWallet);
         ctx.globalAlpha = visible ? 1 : 0.22;
         ctx.fillStyle = t.id === selectedId ? "#ffb13b" : "#ffffff";
         ctx.beginPath();

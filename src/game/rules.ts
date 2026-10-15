@@ -21,7 +21,16 @@ import {
   UNLOAD_MS,
   YARD_MAX_WAIT_MS,
 } from "./constants";
-import { DOCK_IDS, EXIT_POSITION, STORAGE_ZONE_BY_TIER, ZONES, dockById, slotPosition } from "./layout";
+import {
+  DOCK_IDS,
+  EXIT_POSITION,
+  STORAGE_ZONE_BY_TIER,
+  ZONES,
+  dockById,
+  lotSlotPosition,
+  slotPosition,
+  zoneCapacity,
+} from "./layout";
 import type {
   ActivityEvent,
   ActivityEventKind,
@@ -215,11 +224,58 @@ export function assignDocks(trucks: readonly Truck[], now: number): Truck[] {
   });
 }
 
+/** How far to look for a truck's current slot index when keeping it in place. */
+const MAX_SLOT_SCAN = 4096;
+
+/**
+ * Give each truck in `members` a slot from `slotAt`. A truck keeps the slot it
+ * already stands in (so one truck leaving doesn't reshuffle the rest); the
+ * others take the lowest free slots, longest-waiting first.
+ */
+function assignSlots(
+  members: readonly Truck[],
+  slotAt: (index: number) => Truck["position"],
+  out: Map<TruckId, Truck["position"]>,
+  maxIndex = Infinity,
+) {
+  const ordered = [...members].sort((a, b) => a.stateChangedAt - b.stateChangedAt || a.id.localeCompare(b.id));
+  const taken = new Set<number>();
+  const pending: Truck[] = [];
+  const slotIndexOf = indexLookup(slotAt, members.length);
+  for (const t of ordered) {
+    const i = slotIndexOf(t.position);
+    if (i !== undefined && i < maxIndex && !taken.has(i)) {
+      taken.add(i);
+      out.set(t.id, slotAt(i));
+    } else {
+      pending.push(t);
+    }
+  }
+  let next = 0;
+  for (const t of pending) {
+    while (taken.has(next)) next++;
+    taken.add(next);
+    out.set(t.id, slotAt(next));
+  }
+}
+
+/** Reverse lookup from a position to its slot index, for indices that can still be in use. */
+function indexLookup(slotAt: (index: number) => Truck["position"], members: number) {
+  const byKey = new Map<string, number>();
+  const limit = Math.min(MAX_SLOT_SCAN, members * 2 + 8);
+  for (let i = 0; i < limit; i++) {
+    const p = slotAt(i);
+    byKey.set(`${p.x},${p.z}`, i);
+  }
+  return (p: Truck["position"]) => byKey.get(`${p.x},${p.z}`);
+}
+
 /**
  * Set each truck's target position: its dock if docked, otherwise a parking
- * slot in its zone ordered by how long it has been there.
+ * slot. Storage halls hold at most their footprint's worth of trucks, keeping
+ * the newest coins; older ones park in the overflow lot (still in their tier).
  */
-export function layoutTrucks(trucks: readonly Truck[]): Truck[] {
+export function layoutTrucks(trucks: readonly Truck[], coinByMint?: ReadonlyMap<string, Coin>): Truck[] {
   const byZone = new Map<ZoneId, Truck[]>();
   for (const t of trucks) {
     if (!t.zoneId || t.dockId) continue;
@@ -227,20 +283,25 @@ export function layoutTrucks(trucks: readonly Truck[]): Truck[] {
     list.push(t);
     byZone.set(t.zoneId, list);
   }
-  const slotIndex = new Map<TruckId, number>();
-  for (const list of byZone.values()) {
-    list
-      .sort((a, b) => a.stateChangedAt - b.stateChangedAt || a.id.localeCompare(b.id))
-      .forEach((t, i) => slotIndex.set(t.id, i));
+
+  const positions = new Map<TruckId, Truck["position"]>();
+  const overflow: Truck[] = [];
+  for (const [zoneId, list] of byZone) {
+    if (ZONES[zoneId].kind !== "storage") {
+      assignSlots(list, (i) => slotPosition(zoneId, i), positions);
+      continue;
+    }
+    const capacity = zoneCapacity(zoneId);
+    const launchedAt = (t: Truck) => coinByMint?.get(t.mint)?.createdAt ?? t.stateChangedAt;
+    const newestFirst = [...list].sort((a, b) => launchedAt(b) - launchedAt(a) || a.id.localeCompare(b.id));
+    assignSlots(newestFirst.slice(0, capacity), (i) => slotPosition(zoneId, i), positions, capacity);
+    overflow.push(...newestFirst.slice(capacity));
   }
+  assignSlots(overflow, lotSlotPosition, positions);
 
   return trucks.map((t) => {
     const dock = t.dockId ? dockById(t.dockId) : undefined;
-    const position = dock
-      ? dock.position
-      : t.zoneId
-        ? slotPosition(t.zoneId, slotIndex.get(t.id) ?? 0)
-        : EXIT_POSITION;
+    const position = dock ? dock.position : t.zoneId ? positions.get(t.id)! : EXIT_POSITION;
     return samePosition(position, t.position) ? t : { ...t, position };
   });
 }
@@ -274,7 +335,7 @@ export function advanceTrucks(coins: readonly Coin[], trucks: readonly Truck[], 
     if (!prevByMint.has(coin.mint)) stepped.push(createTruck(coin, now));
   }
 
-  const next = layoutTrucks(assignDocks(stepped, now));
+  const next = layoutTrucks(assignDocks(stepped, now), coinByMint);
   return { trucks: next, events: diffEvents(prevByMint, next, coinByMint, now) };
 }
 

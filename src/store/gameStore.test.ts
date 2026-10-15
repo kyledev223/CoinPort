@@ -40,6 +40,20 @@ describe("game store", () => {
     expect(s.cameraRequest).not.toBeNull();
   });
 
+  it("replaces the previous source on connect, so feeds never mix", async () => {
+    const live = { mint: "LIVEpump", name: "Live", symbol: "LIVE", imageUrl: "", metadataUri: "", creatorWallet: "W",
+      createdAt: Date.now() - 3_600_000, network: "devnet" as const, marketCapSol: 40, curveProgress: 0.2, graduated: false };
+    const disconnectLive = useGameStore.getState().connect({ isSimulated: false, listCoins: async () => [live], subscribe: () => () => {} });
+    await vi.advanceTimersByTimeAsync(0);
+    // The mock source from beforeEach keeps launching, but it was disconnected.
+    source.launchCoin({ name: "Sim", symbol: "SIM" });
+    await vi.advanceTimersByTimeAsync(WORLD_TICK_MS);
+    const s = useGameStore.getState();
+    expect(s.isSimulated).toBe(false);
+    expect(Object.keys(s.coins)).toEqual(["LIVEpump"]);
+    disconnectLive();
+  });
+
   it("flies to districts and lets a pan take over", () => {
     const { goToDistrict } = useGameStore.getState();
     goToDistrict("graduation-gate");

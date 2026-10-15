@@ -2,17 +2,16 @@
 
 import { LIFECYCLE_STAGES, NO_FILTERS, isFiltering, matchesTruckFilters, type LifecycleStage } from "@/game";
 import { useGameStore } from "@/store/gameStore";
-import { useConnectedWallet } from "@/wallet/useConnectedWallet";
 import { SearchIcon } from "./icons";
 
 /** Truck filters: lifecycle stage, My coins and search. Trucks that don't match fade in the scene. */
 export function FiltersPanel() {
   const filters = useGameStore((s) => s.filters);
   const setFilters = useGameStore((s) => s.setFilters);
-  const wallet = useConnectedWallet();
+  const wallet = useGameStore((s) => s.viewerWallet);
   const total = useGameStore((s) => s.world.trucks.length);
   const shown = useGameStore((s) =>
-    s.world.trucks.reduce((n, t) => n + (matchesTruckFilters(t, s.coins[t.mint], s.filters, wallet) ? 1 : 0), 0),
+    s.world.trucks.reduce((n, t) => n + (matchesTruckFilters(t, s.coins[t.mint], s.filters, s.viewerWallet) ? 1 : 0), 0),
   );
   const active = isFiltering(filters);
 

@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { OVERFLOW_LOT, lotSlotPosition, slotPosition } from "./layout";
 import { motionEndsAt, planMotion, sampleMotion, stationaryMotion, timeCrossingZ, yawToward } from "./motion";
+import { routeBetween } from "./roads";
 
 const T0 = 1_000_000;
 const angleDiff = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
@@ -56,5 +58,18 @@ describe("motion", () => {
   it("stays put when stationary", () => {
     const still = stationaryMotion({ x: 3, z: 4, yaw: 1 }, T0, "k");
     expect(sampleMotion(still, T0 + 5000)).toEqual({ x: 3, z: 4, yaw: 1, arrived: true });
+  });
+});
+
+describe("overflow lot routing", () => {
+  it("drives into the lot down its aisle", () => {
+    const from = slotPosition("storage-c", 0);
+    const to = lotSlotPosition(30);
+    const route = routeBetween(from, to, { zoneId: "storage-c", dockId: null });
+    expect(route.at(-1)).toMatchObject({ x: to.x, z: to.z });
+    expect(route.at(-2)).toEqual({ x: OVERFLOW_LOT.aisleX, z: to.z });
+    // Moving within the lot stays on the aisle.
+    const within = routeBetween(to, lotSlotPosition(2), { zoneId: "storage-c", dockId: null });
+    expect(within.slice(0, 2).every((w) => w.x === OVERFLOW_LOT.aisleX)).toBe(true);
   });
 });

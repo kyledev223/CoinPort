@@ -104,7 +104,8 @@ export const SLOT_SIZE = { width: 4, depth: 8 } as const;
 
 /**
  * Parking spot for the `index`-th truck in a zone, filling rows west to east,
- * north to south. Indices past the footprint keep going south (overflow).
+ * north to south. Indices past the footprint keep going south; storage halls
+ * never use those (full halls overflow into the overflow lot instead).
  */
 export function slotPosition(zoneId: ZoneId, index: number): Vec3 {
   const zone = ZONES[zoneId];
@@ -118,6 +119,49 @@ export function slotPosition(zoneId: ZoneId, index: number): Vec3 {
   };
 }
 
+/** Slots that fit inside a zone's footprint. */
+export function zoneCapacity(zoneId: ZoneId): number {
+  const { size } = ZONES[zoneId];
+  return Math.max(1, Math.floor(size.width / SLOT_SIZE.width)) * Math.max(1, Math.floor(size.depth / SLOT_SIZE.depth));
+}
+
 export function dockById(id: DockId): Dock | undefined {
   return DOCKS.find((d) => d.id === id);
+}
+
+// ---------------------------------------------------------------------------
+// Overflow lot: east of the hub, between the avenue and the south edge. When a
+// storage hall is full, its oldest coins park here. They stay in their hall's
+// tier (zoneId); only their parking spot moves.
+
+export const OVERFLOW_LOT = {
+  minX: 44,
+  maxX: 88,
+  minZ: -11,
+  maxZ: 66,
+  /** Centre line of the north–south drive aisle down the middle. */
+  aisleX: 66,
+  aisleWidth: 6,
+} as const;
+
+/** Lot slots are packed tighter than hall slots. */
+export const LOT_SLOT = { width: 3, depth: 7.6 } as const;
+
+const LOT_COLS_PER_SIDE = Math.floor((OVERFLOW_LOT.aisleX - OVERFLOW_LOT.aisleWidth / 2 - OVERFLOW_LOT.minX) / LOT_SLOT.width);
+const LOT_COLS = LOT_COLS_PER_SIDE * 2;
+
+/** Parking spot `index` in the overflow lot: rows north to south, either side of the aisle. Keeps going south past the lot. */
+export function lotSlotPosition(index: number): Vec3 {
+  const row = Math.floor(index / LOT_COLS);
+  const col = index % LOT_COLS;
+  const westOfAisle = col < LOT_COLS_PER_SIDE;
+  const x = westOfAisle
+    ? OVERFLOW_LOT.aisleX - OVERFLOW_LOT.aisleWidth / 2 - (LOT_COLS_PER_SIDE - col - 0.5) * LOT_SLOT.width
+    : OVERFLOW_LOT.aisleX + OVERFLOW_LOT.aisleWidth / 2 + (col - LOT_COLS_PER_SIDE + 0.5) * LOT_SLOT.width;
+  return { x, y: 0, z: OVERFLOW_LOT.minZ + (row + 0.5) * LOT_SLOT.depth };
+}
+
+/** Whether a floor point is inside the overflow lot (or its southward spill-over). */
+export function inOverflowLot(p: { x: number; z: number }): boolean {
+  return p.x >= OVERFLOW_LOT.minX && p.x <= OVERFLOW_LOT.maxX && p.z >= OVERFLOW_LOT.minZ;
 }

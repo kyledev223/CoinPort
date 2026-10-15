@@ -15,7 +15,6 @@ export const COLORS = {
   bulb: "#ffd68a",
   glass: "#1d2a3a",
   tire: "#0b0d10",
-  chrome: "#8a94a3",
   taillight: "#ff3b2f",
   forklift: "#f2a516",
 } as const;

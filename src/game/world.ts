@@ -74,12 +74,6 @@ function restingYaw(t: Truck): number {
   return t.dockId ? (dockById(t.dockId)?.heading ?? PARKED_YAW) : PARKED_YAW;
 }
 
-/** When a truck reaches its current target. */
-export function truckArrivesAt(world: Pick<World, "motions">, truck: Truck): number {
-  const m = world.motions[truck.id];
-  return m ? motionEndsAt(m) : -Infinity;
-}
-
 export function stepWorld(world: World, coins: Readonly<Record<string, Coin>>, now: number): World {
   const live = Object.values(coins).filter((c) => !world.retired[c.mint]);
   const { trucks: advanced, events } = advanceTrucks(live, world.trucks, now);
